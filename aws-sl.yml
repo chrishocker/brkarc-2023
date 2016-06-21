@@ -1,0 +1,61 @@
+---
+- name: configure aws routers 
+  connection: local
+  hosts: aws
+  gather_facts: false
+  vars:
+    provider:
+      host: "{{ device_ip }}"
+      username: ec2-user
+      ssh_keyfile: /Users/chocker/Documents/Tech/Cloud/CSR1K-AWS/chockerva-fedcsn.pem
+    idtoken: Y2FmYmM1NTUtZjMyOS00NDEyLWFmNzgtYzIwNWE0OGIxZDRhLTE0Njc0Nzk2%0AOTkxMTl8L0NYcjZNcUpkZ2VRUklKWE10TjE0TVRobTFiQkl1ckVrYTFHaDdr%0AMVpKbz0%3D%0A
+
+  tasks:
+    - name: Enable Smart License
+      ios_config:
+        lines: license smart enable
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: Configure DNS Server
+      ios_config:
+        lines: ip name-server 8.8.8.8
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: register with CSSM
+      ios_command:
+        commands: "license smart register idtoken {{ idtoken }}"
+        provider: "{{ provider }}"
+      register: status1
+
+    - debug: var=status1.stdout_lines
+    
+    - name: Enable AX 2.5G
+      ios_config:
+        lines: 
+          - license boot level ax
+          - platform hardware throughput level MB 2500
+        provider: "{{ provider }}"
+      notify:
+        - write config    
+
+    - name: Wait for 10 seconds
+      wait_for: timeout=10
+
+    - name: Check Smart License Status
+      ios_command:
+        commands: show license summary
+        provider: "{{ provider }}"
+      register: status2
+
+    - debug: var=status2.stdout_lines
+
+  handlers:
+    - name: write config
+      ios_command:
+        commands: write
+        provider: "{{ provider }}"
+

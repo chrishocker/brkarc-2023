@@ -1,0 +1,22 @@
+---
+- name: IOS CLI PLaybook
+  hosts: tag_Role_router
+  gather_facts: no
+  connection: local
+
+  tasks:
+    - name: set provider
+      set_fact: 
+        provider:
+          host: "{{ ec2_ip_address }}"
+          username: ec2-user
+          ssh_keyfile: /Users/chocker/Documents/Tech/Cloud/CSR1K-AWS/chockerva-fedcsn.pem
+    
+    - name: RUN 'SHOW VERSION'
+      ios_command:
+        provider: "{{ provider }}"
+        commands:
+          - show version
+      register: version
+   
+    - debug: var=version.stdout_lines

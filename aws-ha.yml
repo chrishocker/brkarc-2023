@@ -1,0 +1,59 @@
+---
+- name: configure aws routers 
+  connection: local
+  hosts: aws
+  gather_facts: false
+  vars:
+    provider:
+      host: "{{ device_ip }}"
+      username: ec2-user
+      ssh_keyfile: /Users/chocker/Documents/Tech/Cloud/CSR1K-AWS/chockerva-fedcsn.pem
+
+  pre_tasks:
+    - name: Backup Config
+      ios_template:
+        backup: true
+        src: backupconfig.j2
+        provider: "{{ provider }}"
+
+  tasks:
+    - name: HA EEM Configuration
+      ios_template:
+        src: eem.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: HA GRE Configuration
+      ios_template:
+        src: gre.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: HA EIGRP Configuration
+      ios_template:
+        src: eigrp.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: HA Static Default Route Configuration
+      ios_template:
+        src: staticdefault.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: HA Static IP Address Configuration
+      ios_template:
+        src: staticip.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+  
+  handlers:
+    - name: write config
+      ios_command:
+        commands: write
+        provider: "{{ provider }}"

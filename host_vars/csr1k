@@ -1,0 +1,5 @@
+eni: xyz
+rtb: abc
+region: us-east-1
+dns: a.b.c.d
+cidr: 0.0.0.0/0

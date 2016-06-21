@@ -1,0 +1,5 @@
+interface Tunnel99
+  ip address {{ tunnel_address }} 255.255.255.252
+  bfd interval 500 min_rx 500 multiplier 3
+  tunnel source GigabitEthernet1
+  tunnel destination {{ peer_csr }}

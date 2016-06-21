@@ -1,0 +1,23 @@
+ip route 0.0.0.0 0.0.0.0 {{ igw_address }}
+
+interface GigabitEthernet1
+  ip address {{ ec2_address }} {{ ec2_mask }}
+
+interface Tunnel99
+  ip address {{ tunnel_address }} 255.255.255.252
+  bfd interval 500 min_rx 500 multiplier 3
+  tunnel source GigabitEthernet1
+  tunnel destination {{ peer_csr }}
+
+router eigrp 1
+  bfd interface Tunnel99
+  network {{ prefix }}
+  passive-interface GigabitEthernet1
+
+event manager environment RTB {{ rtb }}
+event manager environment CIDR {{ cidr }}
+event manager environment REGION {{ region }}/{{ dns }}
+event manager environment ENI {{ eni }}
+event manager applet replace-route
+  event syslog pattern "\(Tunnel99\) is down: BFD peer down notified"
+  action 1.0 publish-event sub-system 55 type 55 arg1 $RTB arg2 $CIDR arg3 $ENI arg4 $REGION

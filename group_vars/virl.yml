@@ -1,0 +1,5 @@
+---
+provider:
+  host: "{{ device_ip }}"
+  username: cisco
+  password: cisco

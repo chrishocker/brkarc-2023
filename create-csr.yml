@@ -1,0 +1,49 @@
+---
+- name: Create CSR Instances
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    aws_region: us-west-1
+    vpc_id: vpc-7cb4cf19
+    subnet_id: subnet-35a3d66c
+    csr_ami: ami-4bf7842b
+    key_name: chockerva-fedcsn
+    security_group: sg-332c9257
+
+  tasks:
+    - name: Creating CSR {{ hostname }}
+      ec2:
+        key_name: '{{ key_name }}'
+        region: '{{ aws_region }}'
+        instance_type: m3.medium
+        instance_tags:
+          Name: '{{ hostname }}'
+          Role: router
+          Owner: chocker
+          Tenant: tenant1
+        image: '{{ csr_ami }}'
+        wait: yes
+        count: 1
+        vpc_subnet_id: '{{ subnet_id }}'
+        assign_public_ip: yes
+        private_ip: '{{ private_ip }}'
+        group_id: '{{ security_group }}'
+        source_dest_check: no
+        instance_profile_name: ReplaceRouteRole
+      register: ec2
+
+    - debug: var=ec2
+    #- debug: var=ec2.instances[0].public_ip
+    #- debug: msg="The public IP is {{ ec2.instances[0].public_ip }}"
+
+    - set_fact: public_ip={{ ec2.instances[0].public_ip }}
+    #- debug: var=public_ip
+    - set_fact: instance_id={{ ec2.instance_ids[0] }}
+    - debug: var=instance_id
+
+    - lineinfile: dest=./inventorydir/aws regexp="{{ hostname }}" line="{{ hostname }} device_ip={{ public_ip }} instance_id={{ instance_id }}"
+
+    - local_action: wait_for port=22 host="{{ public_ip }}" timeout=600
+
+    - debug: msg="{{ hostname }} is ready for configuration"

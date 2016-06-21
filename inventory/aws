@@ -1,0 +1,3 @@
+[aws]
+tenant1-csr-a device_ip=54.193.78.54 instance_id=i-d99bf06c
+tenant1-csr-b device_ip=52.53.248.74 instance_id=i-9f61082a

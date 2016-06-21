@@ -1,0 +1,14 @@
+vpc_prefix: 172.24.0.0
+ge1_address-a: 172.24.0.126
+ge1_address-b: 172.24.0.253
+ge1-mask: 255.255.255.0
+igw_address: 172.24.0.1
+tunnel_address-a: 172.24.99.1
+tunnel_address-b: 172.24.99.2
+
+eni-a: eni-602d8b3d
+eni-b: eni-e22f89bf
+rtb: rtb-864815e3
+region: us-west-1
+dns: 172.24.0.2
+cidr: 0.0.0.0/0

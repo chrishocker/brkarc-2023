@@ -1,0 +1,12 @@
+prefix: 172.24.0.0
+ec2_address: 172.24.0.254
+ec2_mask: 255.255.255.0
+igw_address: 172.24.0.1
+peer_csr: 172.24.0.253
+tunnel_address: 172.24.99.1
+
+eni: eni-602d8b3d
+rtb: rtb-864815e3
+region: us-west-1
+dns: 172.24.0.2
+cidr: 0.0.0.0/0
