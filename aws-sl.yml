@@ -3,13 +3,14 @@
   connection: local
   hosts: aws
   gather_facts: false
+  vars_files: 
+    - idtoken.yml
+    - secrets.yml
   vars:
     provider:
       host: "{{ device_ip }}"
       username: ec2-user
-      ssh_keyfile: /Users/chocker/Documents/Tech/Cloud/CSR1K-AWS/chockerva-fedcsn.pem
-  vars_files: 
-    - idtoken.yml
+      ssh_keyfile: "{{ ssh_keyfile }}"
 
   tasks:
     - name: Enable Smart License
