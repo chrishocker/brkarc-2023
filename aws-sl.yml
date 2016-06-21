@@ -8,7 +8,8 @@
       host: "{{ device_ip }}"
       username: ec2-user
       ssh_keyfile: /Users/chocker/Documents/Tech/Cloud/CSR1K-AWS/chockerva-fedcsn.pem
-    idtoken: Y2FmYmM1NTUtZjMyOS00NDEyLWFmNzgtYzIwNWE0OGIxZDRhLTE0Njc0Nzk2%0AOTkxMTl8L0NYcjZNcUpkZ2VRUklKWE10TjE0TVRobTFiQkl1ckVrYTFHaDdr%0AMVpKbz0%3D%0A
+  vars_files: 
+    - idtoken.yml
 
   tasks:
     - name: Enable Smart License
@@ -25,15 +26,15 @@
       notify:
         - write config
 
-    - name: register with CSSM
+    - name: Register with CSSM
       ios_command:
         commands: "license smart register idtoken {{ idtoken }}"
         provider: "{{ provider }}"
       register: status1
 
-    - debug: var=status1.stdout_lines
+    - debug: "msg='Registration Status: {{ status1.stdout_lines[0][1] }}'"
     
-    - name: Enable AX 2.5G
+    - name: Enable AX 2.5G License
       ios_config:
         lines: 
           - license boot level ax
@@ -42,7 +43,7 @@
       notify:
         - write config    
 
-    - name: Wait for 10 seconds
+    - name: Waiting for 10 seconds
       wait_for: timeout=10
 
     - name: Check Smart License Status
