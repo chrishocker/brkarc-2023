@@ -42,7 +42,7 @@
     - set_fact: instance_id={{ ec2.instance_ids[0] }}
     - debug: var=instance_id
 
-    - lineinfile: dest=./inventorydir/aws regexp="{{ hostname }}" line="{{ hostname }} device_ip={{ public_ip }} instance_id={{ instance_id }}"
+    - lineinfile: dest=./inventory/aws regexp="{{ hostname }}" line="{{ hostname }} device_ip={{ public_ip }} instance_id={{ instance_id }}"
 
     - local_action: wait_for port=22 host="{{ public_ip }}" timeout=600
 
