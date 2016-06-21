@@ -34,16 +34,19 @@
       register: ec2
 
     - debug: var=ec2
-    #- debug: var=ec2.instances[0].public_ip
-    #- debug: msg="The public IP is {{ ec2.instances[0].public_ip }}"
 
-    - set_fact: public_ip={{ ec2.instances[0].public_ip }}
-    #- debug: var=public_ip
-    - set_fact: instance_id={{ ec2.instance_ids[0] }}
-    - debug: var=instance_id
+    - name: Collecting Public IP
+      set_fact: public_ip={{ ec2.instances[0].public_ip }}
 
-    - lineinfile: dest=./inventory/aws regexp="{{ hostname }}" line="{{ hostname }} device_ip={{ public_ip }} instance_id={{ instance_id }}"
+    - name: Collecting Instance ID
+      set_fact: instance_id={{ ec2.instance_ids[0] }}
 
-    - local_action: wait_for port=22 host="{{ public_ip }}" timeout=600
+    - name: Updating Inventory
+      lineinfile: dest=./inventory/aws regexp="{{ hostname }}" line="{{ hostname }} public_ip={{ public_ip }} instance_id={{ instance_id }}"
+
+    - name: Waiting for CSR to finish booting
+      local_action: wait_for port=22 host="{{ public_ip }}" timeout=600 delay=300
+
+    - local_action: wait_for timeout=10
 
     - debug: msg="{{ hostname }} is ready for configuration"

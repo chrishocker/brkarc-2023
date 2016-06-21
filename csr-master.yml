@@ -1,0 +1,127 @@
+---
+- name: Create CSR Instances
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    aws_region: us-west-1
+    vpc_id: vpc-7cb4cf19
+    subnet_id: subnet-35a3d66c
+    csr_ami: ami-4bf7842b
+    key_name: chockerva-fedcsn
+    security_group: sg-332c9257
+
+  tasks:
+    - name: Creating CSR {{ hostname }}
+      ec2:
+        key_name: '{{ key_name }}'
+        region: '{{ aws_region }}'
+        instance_type: m3.medium
+        instance_tags:
+          Name: '{{ hostname }}'
+          Role: router
+          Owner: chocker
+          Tenant: tenant1
+        image: '{{ csr_ami }}'
+        wait: yes
+        count: 1
+        vpc_subnet_id: '{{ subnet_id }}'
+        assign_public_ip: yes
+        private_ip: '{{ private_ip }}'
+        group_id: '{{ security_group }}'
+        source_dest_check: no
+        instance_profile_name: ReplaceRouteRole
+      register: ec2
+
+    - debug: var=ec2
+
+    - name: Collecting Public IP
+      set_fact: public_ip={{ ec2.instances[0].public_ip }}
+
+    - name: Collecting Instance ID
+      set_fact: instance_id={{ ec2.instance_ids[0] }}
+
+    - name: Updating Inventory File
+      lineinfile: dest=./inventory/aws regexp="{{ hostname }}" line="{{ hostname }} device_ip={{ public_ip }} instance_id={{ instance_id }}"
+
+    - add_host: name={{ hostname }} device_ip={{ public_ip }}
+
+    - name: Waiting for CSR to finish booting
+      local_action: wait_for port=22 host="{{ public_ip }}" timeout=600 delay=300
+
+    - debug: msg="{{ hostname }} is ready for configuration"
+
+- name: Configure Smart Licensing 
+  connection: local
+  hosts: "{{ hostname }}"
+  gather_facts: false
+  vars_files: 
+    - idtoken.yml
+    - secrets.yml
+
+  pre_tasks:
+    - local_action: command aws ec2 describe-instances --filter "Name=tag:Name,Values={{ hostname }}" "Name=instance-state-name,Values=running"  
+      register: ec2_facts
+    - set_fact: ec2_facts_json="{{ ec2_facts.stdout|from_json }}"
+    - set_fact: public_ip="{{ ec2_facts_json.Reservations[0].Instances[0].PublicIpAddress }}"
+
+    - set_fact:
+        provider:
+          host: "{{ public_ip }}"
+          username: "{{ username }}"
+          ssh_keyfile: "{{ ssh_keyfile }}"
+
+    - debug: var=provider
+
+  tasks:
+
+    - name: Enable Smart License
+      ios_config:
+        lines: license smart enable
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: Configure DNS Server
+      ios_config:
+        lines: ip name-server 8.8.8.8
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: Register with CSSM
+      ios_command:
+        commands: "license smart register idtoken {{ idtoken }}"
+        provider: "{{ provider }}"
+      register: status1
+
+    - debug: "msg='Registration Status: {{ status1.stdout_lines[0][1] }}'"
+    
+    - name: Enable AX 2.5G License
+      ios_config:
+        lines: 
+          - license boot level ax
+          - platform hardware throughput level MB 2500
+        provider: "{{ provider }}"
+      notify:
+        - write config    
+
+    - name: Waiting for 10 seconds
+      wait_for: timeout=10
+
+    - name: Check Smart License Status
+      ios_command:
+        commands: show license summary
+        provider: "{{ provider }}"
+      register: status2
+
+    - debug: var=status2.stdout_lines
+
+  handlers:
+    - name: write config
+      ios_command:
+        commands: write
+        provider: "{{ provider }}"
+
+
+

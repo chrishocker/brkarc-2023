@@ -1,0 +1,41 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "CSR CF Template",
+  "Parameters": {
+    "SubnetId" : { "Type": "AWS::EC2::Subnet::Id" },
+    "PrivateIpAddress" : { "Type": "String" },
+    "VpcId" : { "Type" : "AWS::EC2::VPC::Id" },
+    "SecurityGroupId" : { "Type" : "AWS::EC2::SecurityGroup::Id" }
+  },
+  "Resources" : {
+    "CSRInstance" : {
+      "Properties" : {
+        "DisableApiTermination" : "FALSE",
+        "ImageId" : "ami-4bf7842b",
+        "InstanceType" : "m3.medium",
+        "KernelId" : "aki-eb7e26ae",
+        "KeyName" : "chockerva-fedcsn",
+        "Monitoring" : "false",
+        "SubnetId": { "Ref": "SubnetId" },
+        "PrivateIpAddress": { "Ref" : "PrivateIpAddress" },
+        "Tags" : [
+          {
+            "Key" : "Name",
+            "Value" : "chocker-csr-b"
+          }
+        ],
+        "UserData" : {
+          "Fn::Base64" : {
+            "Fn::Join" : [
+              "",
+              [
+                "ios-config-0001=username test123 privilege 15 password test123"
+              ]
+            ]
+          }
+        }
+      },
+      "Type" : "AWS::EC2::Instance"
+    }
+  }
+}

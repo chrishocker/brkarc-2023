@@ -1,15 +1,15 @@
 ---
-- name: configure aws routers 
+- name: Configure Smart Licensing 
   connection: local
-  hosts: aws
+  hosts: "{{ hostname }}"
   gather_facts: false
   vars_files: 
     - idtoken.yml
     - secrets.yml
   vars:
     provider:
-      host: "{{ device_ip }}"
-      username: ec2-user
+      host: "{{ public_ip }}"
+      username: "{{ username }} "
       ssh_keyfile: "{{ ssh_keyfile }}"
 
   tasks:
