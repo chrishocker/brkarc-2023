@@ -3,13 +3,8 @@
   hosts: localhost
   connection: local
   gather_facts: no
-  vars:
-    aws_region: us-west-1
-    vpc_id: vpc-7cb4cf19
-    subnet_id: subnet-35a3d66c
-    csr_ami: ami-4bf7842b
-    key_name: chockerva-fedcsn
-    security_group: sg-332c9257
+  vars_files:
+    - aws_vars.yml
 
   tasks:
     - name: Creating CSR {{ hostname }}
@@ -44,7 +39,7 @@
     - name: Updating Inventory File
       lineinfile: dest=./inventory/aws regexp="{{ hostname }}" line="{{ hostname }} device_ip={{ public_ip }} instance_id={{ instance_id }}"
 
-    - add_host: name={{ hostname }} device_ip={{ public_ip }}
+    - add_host: name={{ hostname }} public_ip={{ public_ip }} groups=aws
 
     - name: Waiting for CSR to finish booting
       local_action: wait_for port=22 host="{{ public_ip }}" timeout=600 delay=300
@@ -56,22 +51,19 @@
   hosts: "{{ hostname }}"
   gather_facts: false
   vars_files: 
-    - idtoken.yml
     - secrets.yml
 
   pre_tasks:
-    - local_action: command aws ec2 describe-instances --filter "Name=tag:Name,Values={{ hostname }}" "Name=instance-state-name,Values=running"  
-      register: ec2_facts
-    - set_fact: ec2_facts_json="{{ ec2_facts.stdout|from_json }}"
-    - set_fact: public_ip="{{ ec2_facts_json.Reservations[0].Instances[0].PublicIpAddress }}"
+  #  - local_action: command aws ec2 describe-instances --filter "Name=tag:Name,Values={{ hostname }}" "Name=instance-state-name,Values=running"  
+  #    register: ec2_facts
+  #  - set_fact: ec2_facts_json="{{ ec2_facts.stdout|from_json }}"
+  #  - set_fact: public_ip="{{ ec2_facts_json.Reservations[0].Instances[0].PublicIpAddress }}"
 
     - set_fact:
         provider:
           host: "{{ public_ip }}"
           username: "{{ username }}"
           ssh_keyfile: "{{ ssh_keyfile }}"
-
-    - debug: var=provider
 
   tasks:
 
