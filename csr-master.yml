@@ -14,7 +14,7 @@
         instance_type: m3.medium
         instance_tags:
           Name: '{{ hostname }}'
-          Role: router
+          Role: router1
           Owner: chocker
           Tenant: tenant1
         image: '{{ csr_ami }}'
@@ -66,6 +66,13 @@
           ssh_keyfile: "{{ ssh_keyfile }}"
 
   tasks:
+
+    - name: Configure Hostname
+      ios_config:
+        lines: hostname {{ hostname }}
+        provider: "{{ provider }}"
+      notify:
+        - write config
 
     - name: Enable Smart License
       ios_config:
