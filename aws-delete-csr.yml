@@ -1,0 +1,25 @@
+---
+- name: Create CSR Instances
+  hosts: aws
+  connection: local
+  gather_facts: no
+  vars:
+    provider:
+      host: "{{ public_ip }}"
+      username: "{{ username }}"
+      ssh_keyfile: "{{ ssh_keyfile }}"
+  vars_files:
+    - secrets.yml
+
+  tasks:
+    - name: Deregister Smart License
+      ios_command:
+        commands: "license smart deregister"
+        provider: "{{ provider }}"
+
+    - name: Deleting CSR
+      local_action: 
+        module: ec2 
+        state: 'absent'
+        instance_ids: '{{ instance_id }}'
+      register: ec2_status
