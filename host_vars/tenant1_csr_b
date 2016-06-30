@@ -1,0 +1,11 @@
+cidr: 0.0.0.0/0
+dns: 172.24.0.2
+eni: eni-4f45d643
+igw: 172.24.0.1
+peer_csr: 172.24.0.254
+private_ip: 172.24.0.253
+rtb: rtb-864815e3
+subnet_mask: 255.255.255.0
+tunnel_address: 172.24.99.2
+vpc_mask: 255.255.0.0
+vpc_prefix: 172.24.0.0

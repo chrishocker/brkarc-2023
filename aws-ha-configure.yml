@@ -1,13 +1,15 @@
----
-- name: configure aws routers 
+---    
+- name: Configure AWS HA 
   connection: local
   hosts: aws
   gather_facts: false
+  vars_files: 
+    - secrets.yml
   vars:
     provider:
-      host: "{{ device_ip }}"
-      username: ec2-user
-      ssh_keyfile: /Users/chocker/Documents/Tech/Cloud/CSR1K-AWS/chockerva-fedcsn.pem
+      host: "{{ public_ip }}"
+      username: "{{ username }}"
+      ssh_keyfile: "{{ ssh_keyfile }}"
 
   pre_tasks:
     - name: Backup Config

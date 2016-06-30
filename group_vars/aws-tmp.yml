@@ -1,5 +1,0 @@
----
-provider:
-  host: "{{ device_ip }}"
-  username: ec2-user
-  ssh_keyfile: /Users/chocker/Documents/Tech/Cloud/CSR1K-AWS/chockerva-fedcsn.pem

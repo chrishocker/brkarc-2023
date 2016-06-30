@@ -1,18 +1,17 @@
 ---
 - name: Configure Smart Licensing 
   connection: local
-  hosts: "{{ hostname }}"
+  hosts: aws
   gather_facts: false
   vars_files: 
-    - idtoken.yml
     - secrets.yml
   vars:
     provider:
       host: "{{ public_ip }}"
-      username: "{{ username }} "
+      username: "{{ username }}"
       ssh_keyfile: "{{ ssh_keyfile }}"
 
-  tasks:
+  tasks:    
     - name: Enable Smart License
       ios_config:
         lines: license smart enable
