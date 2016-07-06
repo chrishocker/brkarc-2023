@@ -1,5 +1,5 @@
 ---
-- name: Create CSR Instances
+- name: Deleting CSR Instances
   hosts: aws
   connection: local
   gather_facts: no
@@ -12,10 +12,19 @@
     - secrets.yml
 
   tasks:
+    - name: Check For Smart License
+      ios_command:
+        commands: "show license status | inc  Status: REGISTERED"
+        provider: "{{ provider }}"
+      register: sl_status
+      tags: sl
+
     - name: Deregister Smart License
       ios_command:
         commands: "license smart deregister"
         provider: "{{ provider }}"
+      when: "sl_status.stdout_lines[0][0] | search('Status: REGISTERED')"
+      tags: sl
 
     - name: Deleting CSR
       local_action: 
@@ -23,3 +32,7 @@
         state: 'absent'
         instance_ids: '{{ instance_id }}'
       register: ec2_status
+
+    - name: Update Inventory
+      lineinfile: dest=./inventory/aws regexp="{{ ansible_host }}" state=absent
+      tags: inv

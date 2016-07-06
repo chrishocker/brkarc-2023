@@ -24,7 +24,9 @@
           Tenant: tenant1
         image: '{{ csr_ami }}'
         wait: yes
-        count: 1
+        exact_count: 1
+        count_tag: 
+          - Name: '{{ hostname }}'
         vpc_subnet_id: '{{ subnet_id }}'
         assign_public_ip: yes
         private_ip: '{{ private_ip }}'
@@ -32,20 +34,24 @@
         source_dest_check: no
         instance_profile_name: ReplaceRouteRole
         user_data: 'ios-config-0001=hostname {{ hostname }}'
-      register: ec2
+      register: csr
 
-    - debug: var=ec2
+    - debug: var=csr
 
     - name: Collecting Public IP
-      set_fact: public_ip={{ ec2.instances[0].public_ip }}
+      set_fact: public_ip={{ csr.tagged_instances[0].public_ip }}
+      when: csr.tagged_instances[0] is defined
 
     - name: Collecting Instance ID
-      set_fact: instance_id={{ ec2.instance_ids[0] }}
+      set_fact: instance_id={{ csr.tagged_instances[0].id }}
+      when: csr.tagged_instances[0] is defined
 
-    - name: Updating Inventory
+    - name: Update Inventory
       lineinfile: dest=./inventory/aws regexp="{{ hostname }}" line="{{ hostname }} public_ip={{ public_ip }} instance_id={{ instance_id }}"
+      when: csr.tagged_instances[0] is defined
 
-    - name: Waiting for CSR to finish booting
-      local_action: wait_for port=22 host="{{ public_ip }}" timeout=600 delay=300
+   # - name: Waiting for CSR to finish booting
+   #   local_action: wait_for port=22 host="{{ public_ip }}" timeout=600 delay=300
 
-    - debug: msg="{{ hostname }} is ready for configuration"
+   # - debug: msg="{{ hostname }} is ready for configuration"
+

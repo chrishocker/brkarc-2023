@@ -1,0 +1,133 @@
+---
+- name: Gather HA Data
+  hosts: aws
+  connection: local
+
+  tasks:
+    - set_fact: hostname={{ansible_host}}
+    
+    # Get the EC2 meta data for the CSR instance
+    - name: gather ec2 facts
+      local_action: command aws ec2 describe-instances --filter "Name=tag:Name,Values={{ hostname }}" "Name=instance-state-name,Values=running"  
+      register: ec2_facts
+    - set_fact: ec2_facts_json="{{ ec2_facts.stdout | from_json }}"
+    - set_fact: public_ip="{{ ec2_facts_json.Reservations[0].Instances[0].PublicIpAddress }}"
+    - set_fact: private_ip="{{ ec2_facts_json.Reservations[0].Instances[0].PrivateIpAddress }}"
+    - set_fact: eni="{{ ec2_facts_json.Reservations[0].Instances[0].NetworkInterfaces[0].NetworkInterfaceId }}"
+    - set_fact: vpc_id="{{ ec2_facts_json.Reservations[0].Instances[0].NetworkInterfaces[0].VpcId }}"
+    - set_fact: subnet_id="{{ ec2_facts_json.Reservations[0].Instances[0].NetworkInterfaces[0].SubnetId }}"
+
+    # This is the route table that the CSR will modify. This example uses the main VPC route table.
+    - name: gather rtb facts
+      local_action: command aws ec2 describe-route-tables --filter "Name=vpc-id,Values={{vpc_id}}" "Name=association.main,Values=true"
+      register: rtb_facts
+    - set_fact: rtb_facts_json="{{ rtb_facts.stdout | from_json }}"
+    - set_fact: rtb="{{ rtb_facts_json.RouteTables[0].RouteTableId }}"
+
+    # We need the VPC CIDR block for the VPC to calculate the DNS server and for settings up routing.
+    - name: gather vpc facts
+      local_action: command aws ec2 describe-vpcs --filter "Name=vpc-id,Values={{vpc_id}}"
+      register: vpc_facts
+    - set_fact: vpc_facts_json="{{ vpc_facts.stdout | from_json }}"
+    - set_fact: vpc_cidr="{{ vpc_facts_json.Vpcs[0].CidrBlock }}"
+    - set_fact: vpc_netmask="{{ vpc_cidr | ipaddr('netmask') }}"
+    - set_fact: vpc_prefix="{{ vpc_cidr | ipaddr('network') }}"
+    - set_fact: dns="{{ vpc_cidr | ipaddr('2') | ipaddr('address') }}"
+    
+    # We also use the VPC CIDR block to allocate the HA tunnel addresses.
+    - set_fact: tunnel_address="{{ vpc_cidr | ipaddr(99*256 + 1) | ipaddr('address') }}"
+      when: "'{{ hostname }}' | search('csr_a')"
+    - set_fact: tunnel_address="{{ vpc_cidr | ipaddr(99*256 + 2) | ipaddr('address') }}"
+      when: "'{{ hostname }}' | search('csr_b')"
+
+    # We need the subnet information to configure the CSR for static addresses and calculate the peer CSR.
+    - name: gather subnet facts
+      local_action: command aws ec2 describe-subnets --filter "Name=subnet-id,Values={{subnet_id}}"
+      register: subnet_facts
+    - set_fact: subnet_facts_json="{{ subnet_facts.stdout|from_json}}"
+    - set_fact: subnet_cidr="{{ subnet_facts_json.Subnets[0].CidrBlock}}"
+    - set_fact: igw="{{ subnet_cidr | ipaddr('1') | ipaddr('address') }}"
+    - set_fact: subnet_mask="{{ subnet_cidr | ipaddr('netmask') }}"
+    - set_fact: peer_csr="{{ subnet_cidr | ipaddr(-3) | ipaddr('address') }}"
+      when: "'{{ hostname }}' | search('csr_a')"
+    - set_fact: peer_csr="{{ subnet_cidr | ipaddr(-2) | ipaddr('address') }}"
+      when: "'{{ hostname }}' | search('csr_b')"
+
+    # The is the route that we are doing to modify in the VPC route table.
+    - set_fact: cidr="0.0.0.0/0"    
+
+    # All of the variables that we need to configure HA on the CSR.
+    - debug: var={{ item }}
+      with_items:
+        - private_ip
+        - vpc_prefix
+        - vpc_mask
+        - dns
+        - igw
+        - subnet_mask
+        - eni
+        - rtb
+        - cidr
+        - tunnel_address
+        - peer_csr
+
+- name: Configure AWS HA 
+  connection: local
+  hosts: aws
+  gather_facts: false
+  vars_files: 
+    - secrets.yml
+  vars:
+    provider:
+      host: "{{ public_ip }}"
+      username: "{{ username }}"
+      ssh_keyfile: "{{ ssh_keyfile }}"
+
+  pre_tasks:
+    - name: Backup Config
+      ios_template:
+        backup: true
+        src: backupconfig.j2
+        provider: "{{ provider }}"
+
+  tasks:
+    - name: HA EEM Configuration
+      ios_template:
+        src: eem.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: HA GRE Configuration
+      ios_template:
+        src: gre.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: HA EIGRP Configuration
+      ios_template:
+        src: eigrp.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: HA Static Default Route Configuration
+      ios_template:
+        src: staticdefault.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+
+    - name: HA Static IP Address Configuration
+      ios_template:
+        src: staticip.j2
+        provider: "{{ provider }}"
+      notify:
+        - write config
+  
+  handlers:
+    - name: write config
+      ios_command:
+        commands: write
+        provider: "{{ provider }}"
