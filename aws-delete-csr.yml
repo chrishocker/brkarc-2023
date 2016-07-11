@@ -3,6 +3,7 @@
   hosts: aws
   connection: local
   gather_facts: no
+  serial: 1
   vars:
     provider:
       host: "{{ public_ip }}"
@@ -34,5 +35,5 @@
       register: ec2_status
 
     - name: Update Inventory
-      lineinfile: dest=./inventory/aws regexp="{{ ansible_host }}" state=absent
+      lineinfile: dest=./hosts regexp="{{ ansible_host }}" state=absent
       tags: inv

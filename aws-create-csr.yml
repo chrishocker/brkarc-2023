@@ -5,10 +5,10 @@
   gather_facts: no
   vars:
     aws_region: us-west-1
-    vpc_id: vpc-7cb4cf19
-    subnet_id: subnet-35a3d66c
     csr_ami: ami-4bf7842b
     key_name: chockerva-fedcsn
+    vpc_id: vpc-7cb4cf19
+    subnet_id: subnet-35a3d66c
     security_group: sg-332c9257
 
   tasks:
@@ -36,7 +36,7 @@
         user_data: 'ios-config-0001=hostname {{ hostname }}'
       register: csr
 
-    - debug: var=csr
+    - debug: var=hostvars[inventory_hostname]
 
     - name: Collecting Public IP
       set_fact: public_ip={{ csr.tagged_instances[0].public_ip }}
@@ -47,7 +47,7 @@
       when: csr.tagged_instances[0] is defined
 
     - name: Update Inventory
-      lineinfile: dest=./inventory/aws regexp="{{ hostname }}" line="{{ hostname }} public_ip={{ public_ip }} instance_id={{ instance_id }}"
+      lineinfile: dest=./hosts regexp="{{ hostname }}" line="{{ hostname }} public_ip={{ public_ip }} instance_id={{ instance_id }}"
       when: csr.tagged_instances[0] is defined
 
    # - name: Waiting for CSR to finish booting
